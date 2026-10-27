@@ -1,11 +1,11 @@
-# Sets up offline transcription: whisper.cpp's HTTP server -> packages\transcriber\bin\whisper.exe, ggml-tiny.bin -> models\.
+# Sets up offline transcription: whisper.cpp's HTTP server -> packages\transcriber\bin\Release\whisper-server.exe, ggml-tiny.bin -> models\.
 # Run from anywhere:  powershell -ExecutionPolicy Bypass -File packages\transcriber\scripts\setup-whisper.ps1
 # Compiles from source when CMake + a C++ toolchain are present; otherwise downloads the official prebuilt binaries of the same tag.
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'  # Invoke-WebRequest is ~10x slower with the progress bar
 $Pkg    = Split-Path $PSScriptRoot -Parent
 $Src    = Join-Path $Pkg 'whisper.cpp'
-$Bin    = Join-Path $Pkg 'bin'
+$Bin    = Join-Path $Pkg 'bin\Release'
 $Models = Join-Path $Pkg 'models'
 $Model  = Join-Path $Models 'ggml-tiny.bin'
 $Tag    = 'v1.7.6'  # newest release that ships Windows binaries; the source build uses the same tag
@@ -45,9 +45,9 @@ if (Has 'cmake') {
 }
 $server = Get-ChildItem $out -Recurse -Filter 'whisper-server.exe' | Select-Object -First 1
 if (-not $server) { throw "whisper-server.exe not found under $out" }
-Copy-Item $server.FullName (Join-Path $Bin 'whisper.exe') -Force
+Copy-Item $server.FullName (Join-Path $Bin 'whisper-server.exe') -Force
 Get-ChildItem $server.DirectoryName -Filter '*.dll' | Copy-Item -Destination $Bin -Force
-Write-Host "    -> $Bin\whisper.exe"
+Write-Host "    -> $Bin\whisper-server.exe"
 
 Step 'Downloading ggml-tiny.bin'
 if (Test-Path $Model) { Write-Host '    already present' }

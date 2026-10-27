@@ -29,8 +29,8 @@ Status: Phase 1 (shell only). Transcription, AI and storage are designed here bu
 
 ## Transcription
 
-- **Engine:** whisper.cpp, fully offline. `packages/transcriber/scripts/setup-whisper.ps1` builds (or downloads the prebuilt) `whisper-server` into `packages/transcriber/bin/whisper.exe`; models in `packages/transcriber/models/`.
-- **Integration:** `@revelio/transcriber` spawns `whisper.exe` (whisper-server) as a child process, restarts it with backoff if it exits, and POSTs 3-second WAV chunks over localhost.
+- **Engine:** whisper.cpp, fully offline. `packages/transcriber/scripts/setup-whisper.ps1` builds (or downloads the prebuilt) `whisper-server` into `packages/transcriber/bin/Release/whisper-server.exe`; models in `packages/transcriber/models/`.
+- **Integration:** `@revelio/transcriber` spawns `bin/Release/whisper-server.exe` as a child process, restarts it with backoff if it exits, and POSTs 3-second WAV chunks over localhost.
 - **Capture (current):** `apps/desktop/audio.js` reads the mic and a loopback-style input ("Stereo Mix") via `naudiodon` (PortAudio), falling back to SoX; silent windows are skipped. IPC: `audio:start|stop|status` (invoke), `transcript:new` and `audio:status` (events).
 - **Acceleration:** CUDA build when `nvidia-smi` is present (Windows/Linux); Metal on Apple Silicon (default in whisper.cpp); CPU otherwise.
 - **Models:** `tiny` default; switcher for `base`, `small`, `medium`, `large`. Downloaded on demand from the whisper.cpp model repo.

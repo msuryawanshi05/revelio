@@ -1,4 +1,4 @@
-// whisper.cpp integration: runs whisper-server (bin/whisper.exe) as a child process and POSTs WAV chunks to it.
+// whisper.cpp integration: runs whisper-server (bin/Release/whisper-server.exe) as a child process and POSTs WAV chunks to it.
 // Setup: scripts/setup-whisper.ps1. See docs/architecture.md#transcription
 const { spawn } = require('node:child_process');
 const { EventEmitter } = require('node:events');
@@ -8,7 +8,7 @@ const path = require('node:path');
 const pcm = require('./pcm');
 
 const ROOT = path.join(__dirname, '..');
-const BIN = path.join(ROOT, 'bin', process.platform === 'win32' ? 'whisper.exe' : 'whisper');
+const BIN = path.join(ROOT, 'bin', 'Release', process.platform === 'win32' ? 'whisper-server.exe' : 'whisper-server');
 const MODEL = path.join(ROOT, 'models', 'ggml-tiny.bin');
 const MAX_RESTARTS = 5;
 
