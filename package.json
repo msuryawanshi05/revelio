@@ -1,0 +1,22 @@
+{
+  "name": "revelio",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Real-time AI meeting & interview assistant",
+  "license": "MIT",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n web,desktop -c green,cyan \"npm run dev -w @revelio/web\" \"wait-on http://localhost:3000 && npm run dev -w @revelio/desktop\"",
+    "build:web": "npm run build -w @revelio/web"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6",
+    "wait-on": "^9.5.1"
+  }
+}

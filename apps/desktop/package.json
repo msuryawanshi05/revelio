@@ -1,0 +1,12 @@
+{
+  "name": "@revelio/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "dev": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^45.0.0"
+  }
+}

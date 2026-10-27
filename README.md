@@ -93,12 +93,40 @@ Transcription runs fully offline via **whisper.cpp** (tiny model by default, CUD
 
 ## Installation
 
-> 🚧 Installers are in progress.
+> 🚧 Installers are in progress — whisper.cpp build steps are still stubbed.
 
 | OS | Script |
 |---|---|
-| Windows | See `install.ps1` |
-| macOS | See `install.sh` |
+| Windows | `powershell -ExecutionPolicy Bypass -File scripts\install.ps1` |
+| macOS | `bash scripts/install.sh` |
+
+### Development
+
+Requires **Node.js 22+**.
+
+```bash
+npm install
+npm run dev     # starts the Next.js UI on :3000, then opens the Electron overlay
+```
+
+<details>
+<summary><b>Project structure</b></summary>
+
+```
+revelio/
+├── apps/
+│   ├── desktop/      # Electron shell — overlay window, preload bridge
+│   └── web/          # Next.js UI — live session, sessions sidebar, settings
+├── packages/
+│   ├── transcriber/  # whisper.cpp integration
+│   ├── agent/        # streaming AI answer engine
+│   ├── storage/      # SQLite + Google Drive sync
+│   └── session/      # session state machine and timer
+├── docs/             # architecture and research notes
+└── scripts/          # install.ps1 (Windows), install.sh (macOS)
+```
+
+</details>
 
 ---
 
