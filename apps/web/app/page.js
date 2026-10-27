@@ -17,12 +17,14 @@ export default function LiveSession() {
   const [vote, setVote] = useState(null);
   const [sources, setSources] = useState(null); // meeting window picker list while open
   const [meeting, setMeeting] = useState(null); // { id, name } -> 'interviewer' audio
+  const [desktop, setDesktop] = useState(null); // null until mounted; false in a plain browser (no Electron bridge)
   const transcriptRef = useRef(null);
   const listening = audio.state === 'recording';
 
   useEffect(() => {
     const api = window.revelio;
-    if (!api?.onTranscript) return; // plain browser, no Electron
+    setDesktop(!!api?.onTranscript);
+    if (!api?.onTranscript) return;
     api.audioStatus().then(setAudio);
     const offStatus = api.onAudioStatus(setAudio);
     const offTranscript = api.onTranscript((e) => setLines((prev) => [...prev, { who: SPEAKER[e.speaker], t: clock(e.timestamp), text: e.text }]));
@@ -65,10 +67,11 @@ export default function LiveSession() {
                 <div>{l.text}</div>
               </div>
             ))}
+            {desktop === false && <p className="muted" role="status">Run as desktop app for live transcription</p>}
             {audio.message && <p className="muted" role="status">{audio.message}</p>}
           </div>
           <div className="pane-foot">
-            <button className="btn" disabled={audio.state === 'starting'} onClick={() => (listening ? window.revelio?.stopAudio() : window.revelio?.startAudio(meeting?.id))}>{listening ? 'Stop' : 'Start'}</button>
+            <button className="btn" disabled={!desktop || audio.state === 'starting'} onClick={() => (listening ? window.revelio?.stopAudio() : window.revelio?.startAudio(meeting?.id))}>{listening ? 'Stop' : 'Start'}</button>
             <span className={listening ? 'dot rec' : 'dot'} title={listening ? 'Recording' : 'Not recording'} />
             <span className="mic" title="Microphone" aria-hidden="true">🎙</span>
             <button className="btn" onClick={() => setLines([])}>Clear</button>
@@ -80,7 +83,7 @@ export default function LiveSession() {
                 {sources.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             ) : (
-              <button className="btn source" disabled={listening} title={meeting ? `Interviewer audio: ${meeting.name}` : 'Pick the window whose audio is the interviewer'}
+              <button className="btn source" disabled={!desktop || listening} title={meeting ? `Interviewer audio: ${meeting.name}` : 'Pick the window whose audio is the interviewer'}
                 onClick={() => window.revelio?.getSources().then(setSources)}>{meeting ? meeting.name : 'Select meeting window'}</button>
             )}
             <select className="select push" value={lang} onChange={(e) => setLang(e.target.value)} aria-label="Language">

@@ -3,14 +3,16 @@
 // Mic: naudiodon, else SoX, else the renderer's getUserMedia. Meeting audio: always the renderer (getUserMedia with a
 // desktopCapturer chromeMediaSourceId — main has no getUserMedia), streamed back over IPC into feed().
 const { spawn, spawnSync } = require('node:child_process');
-const { rms, SAMPLE_RATE } = require('@revelio/transcriber');
+const { voicedSeconds, SAMPLE_RATE } = require('@revelio/transcriber');
 
 let portAudio = null;
 try { portAudio = require('naudiodon'); } catch {} // optional native dep (needs node-gyp)
 const hasSox = !portAudio && !spawnSync('sox', ['--version'], { windowsHide: true }).error;
 
 const WINDOW_MS = 3000;
-const SILENCE_RMS = 0.005; // whisper invents text on silence, so quiet windows are skipped
+// whisper invents text on silence/noise, so a window is sent only if it has enough audio above the noise floor
+const NOISE_FLOOR_RMS = 0.01;
+const MIN_VOICED_S = 0.5;
 const SOURCES = [['mic', 'you'], ['system', 'interviewer']];
 
 function openPortAudio(onData, onError) {
@@ -68,7 +70,7 @@ function createPipeline({ transcriber, onTranscript, onStatus, open }) {
     const at = s.since;
     s.chunks = [];
     s.since = new Date();
-    if (rms(buf) < SILENCE_RMS) return;
+    if (voicedSeconds(buf, NOISE_FLOOR_RMS) < MIN_VOICED_S) return;
     // shortcut: fixed 3 s windows can split a word at the boundary; upgrade to VAD-segmented chunks if accuracy suffers.
     transcriber.transcribe(buf)
       .then((text) => text && onTranscript({ speaker: s.speaker, text, timestamp: at.toISOString() }))

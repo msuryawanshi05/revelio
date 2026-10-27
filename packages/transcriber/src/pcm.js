@@ -29,6 +29,14 @@ function rms(buf) {
   return Math.sqrt(sum / n) / 32768;
 }
 
+// Seconds of audio whose 20 ms frames are louder than floor (RMS, 0..1) — a cheap energy VAD.
+function voicedSeconds(buf, floor) {
+  const frame = (SAMPLE_RATE / 50) * 2;
+  let voiced = 0;
+  for (let i = 0; i + frame <= buf.length; i += frame) if (rms(buf.subarray(i, i + frame)) >= floor) voiced++;
+  return voiced / 50;
+}
+
 // 44-byte RIFF header + 16 kHz mono s16le data.
 function wav(pcm) {
   const h = Buffer.alloc(44);
@@ -39,4 +47,4 @@ function wav(pcm) {
   return Buffer.concat([h, pcm]);
 }
 
-module.exports = { SAMPLE_RATE, toMono16k, rms, wav };
+module.exports = { SAMPLE_RATE, toMono16k, rms, voicedSeconds, wav };

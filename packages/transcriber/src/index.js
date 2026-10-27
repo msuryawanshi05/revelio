@@ -12,6 +12,18 @@ const BIN = path.join(ROOT, 'bin', 'Release', process.platform === 'win32' ? 'wh
 const MODEL = path.join(ROOT, 'models', 'ggml-tiny.bin');
 const MAX_RESTARTS = 5;
 
+// Text whisper emits for silence/noise (learned from YouTube subtitles); compared after lowercasing and stripping punctuation.
+const HALLUCINATIONS = new Set(['thank you', 'thanks for watching', 'thank you for watching', 'thanks for listening',
+  'thank you for listening', 'please subscribe', 'like and subscribe', 'subtitles by the amara org community', 'see you next time']);
+const FILLER = new Set(['you', 'thank', 'thanks', 'so', 'oh', 'uh', 'um', 'hmm', 'mm', 'bye', 'okay', 'ok', 'yeah', 'the', 'a', 'i', 'and']);
+
+// True for known silence hallucinations, punctuation-only text, and <3-word utterances made only of filler.
+function isHallucination(text) {
+  const norm = text.toLowerCase().replace(/[^\p{L}\p{N}' ]+/gu, ' ').replace(/\s+/g, ' ').trim();
+  const words = norm ? norm.split(' ') : [];
+  return !words.length || HALLUCINATIONS.has(norm) || (words.length < 3 && words.every((w) => FILLER.has(w)));
+}
+
 const freePort = () => new Promise((resolve, reject) => {
   const srv = net.createServer().once('error', reject).listen(0, '127.0.0.1', () => {
     const { port } = srv.address();
@@ -42,7 +54,7 @@ class Transcriber extends EventEmitter {
 
   async #launch() {
     const port = await freePort();
-    const proc = spawn(this.bin, [...this.args, '-m', this.model, '-l', this.language, '--host', '127.0.0.1', '--port', String(port)], { windowsHide: true });
+    const proc = spawn(this.bin, [...this.args, '-m', this.model, '-l', this.language, '-nc', '--host', '127.0.0.1', '--port', String(port)], { windowsHide: true });
     this.proc = proc;
     let log = '';
     const keep = (d) => { log = (log + d).slice(-2000); };
@@ -80,13 +92,17 @@ class Transcriber extends EventEmitter {
     const form = new FormData();
     form.append('file', new Blob([pcm.wav(pcmBuffer)], { type: 'audio/wav' }), 'chunk.wav');
     form.append('response_format', 'json');
+    // temperature_inc 0 disables the temperature fallback (this server ignores its -nf flag); fallback re-decodes noise at higher temperature and invents text.
     form.append('temperature', '0');
+    form.append('temperature_inc', '0');
+    form.append('no_context', 'true');
     const res = await fetch(`${url}/inference`, { method: 'POST', body: form, signal: AbortSignal.timeout(30_000) });
     if (!res.ok) throw new Error(`whisper server HTTP ${res.status}`);
     const { text = '' } = await res.json();
     this.restarts = 0;
     // whisper marks non-speech as [BLANK_AUDIO], (music), etc.
-    return text.replace(/\[[^\]]*\]|\([^)]*\)/g, '').replace(/\s+/g, ' ').trim();
+    const clean = text.replace(/\[[^\]]*\]|\([^)]*\)/g, '').replace(/\s+/g, ' ').trim();
+    return isHallucination(clean) ? '' : clean;
   }
 
   stop() {
@@ -97,4 +113,4 @@ class Transcriber extends EventEmitter {
   }
 }
 
-module.exports = { Transcriber, ...pcm };
+module.exports = { Transcriber, isHallucination, ...pcm };

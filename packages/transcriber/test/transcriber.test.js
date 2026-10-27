@@ -1,7 +1,7 @@
 // node --test packages/transcriber/test/*.test.js — uses a fake whisper-server, no model needed.
 const test = require('node:test');
 const assert = require('node:assert');
-const { Transcriber, toMono16k, rms, wav } = require('../src');
+const { Transcriber, isHallucination, toMono16k, rms, voicedSeconds, wav } = require('../src');
 
 const FAKE = `
 const port = +process.argv[process.argv.indexOf('--port') + 1];
@@ -24,6 +24,9 @@ test('pcm helpers', () => {
   assert.strictEqual(mono.readInt16LE(100), 2000);
   assert.ok(Math.abs(rms(mono) - 2000 / 32768) < 1e-6);
   assert.strictEqual(rms(Buffer.alloc(0)), 0);
+  assert.strictEqual(voicedSeconds(mono, 0.01), 1);
+  assert.strictEqual(voicedSeconds(Buffer.concat([mono.subarray(0, 16000), Buffer.alloc(16000)]), 0.01), 0.5);
+  assert.strictEqual(voicedSeconds(mono, 0.1), 0);
   const w = wav(mono);
   assert.strictEqual(w.toString('ascii', 0, 4), 'RIFF');
   assert.strictEqual(w.readUInt32LE(24), 16000);
@@ -54,4 +57,9 @@ test('restarts after the server exits', async () => {
 
 test('missing binary rejects with setup hint', async () => {
   await assert.rejects(new Transcriber({ bin: 'nope.exe' }).transcribe(Buffer.alloc(2)), /setup-whisper/);
+});
+
+test('hallucination filter', () => {
+  for (const t of ['Thank you.', 'Thanks for watching!', '.', '...', '?', 'you', 'Bye.', 'Okay, so', ' ']) assert.ok(isHallucination(t), t);
+  for (const t of ['I used a debounce here.', 'Thank you for the question', 'React hooks', 'Sure, thank you']) assert.ok(!isHallucination(t), t);
 });
