@@ -15,6 +15,8 @@ export default function LiveSession() {
   const [lines, setLines] = useState([]);
   const [lang, setLang] = useState(LANGUAGES[0]);
   const [vote, setVote] = useState(null);
+  const [sources, setSources] = useState(null); // meeting window picker list while open
+  const [meeting, setMeeting] = useState(null); // { id, name } -> 'interviewer' audio
   const transcriptRef = useRef(null);
   const listening = audio.state === 'recording';
 
@@ -66,10 +68,21 @@ export default function LiveSession() {
             {audio.message && <p className="muted" role="status">{audio.message}</p>}
           </div>
           <div className="pane-foot">
-            <button className="btn" disabled={audio.state === 'starting'} onClick={() => (listening ? window.revelio?.stopAudio() : window.revelio?.startAudio())}>{listening ? 'Stop' : 'Start'}</button>
+            <button className="btn" disabled={audio.state === 'starting'} onClick={() => (listening ? window.revelio?.stopAudio() : window.revelio?.startAudio(meeting?.id))}>{listening ? 'Stop' : 'Start'}</button>
             <span className={listening ? 'dot rec' : 'dot'} title={listening ? 'Recording' : 'Not recording'} />
             <span className="mic" title="Microphone" aria-hidden="true">🎙</span>
             <button className="btn" onClick={() => setLines([])}>Clear</button>
+            {sources ? (
+              <select className="select source" autoFocus defaultValue="" aria-label="Meeting window"
+                onChange={(e) => { setMeeting(sources.find((s) => s.id === e.target.value) || null); setSources(null); }}
+                onBlur={() => setSources(null)}>
+                <option value="" disabled>Choose meeting window…</option>
+                {sources.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            ) : (
+              <button className="btn source" disabled={listening} title={meeting ? `Interviewer audio: ${meeting.name}` : 'Pick the window whose audio is the interviewer'}
+                onClick={() => window.revelio?.getSources().then(setSources)}>{meeting ? meeting.name : 'Select meeting window'}</button>
+            )}
             <select className="select push" value={lang} onChange={(e) => setLang(e.target.value)} aria-label="Language">
               {LANGUAGES.map((l) => <option key={l}>{l}</option>)}
             </select>

@@ -189,6 +189,7 @@ code { padding: 1px 4px; border-radius: 4px; background: var(--surface-2); }
 .pane-foot { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--border); background: var(--surface); }
 .dot.rec { background: var(--danger); animation: pulse 1.6s ease-in-out infinite; }
 .mic { font-size: 16px; }
+.source { max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
 
 /* Listening pulse: 3 rings, shown only while the pane is listening */
 .transcript { position: relative; }

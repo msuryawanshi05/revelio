@@ -1,7 +1,7 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('node:path');
 const { Transcriber } = require('@revelio/transcriber');
-const { createPipeline } = require('./audio');
+const { createPipeline, getSources } = require('./audio');
 
 // shortcut: dev only loads the Next.js dev server; packaged builds will load a static export (Phase 2).
 const UI_URL = process.env.REVELIO_URL || 'http://localhost:3000';
@@ -40,7 +40,10 @@ const audio = createPipeline({
 });
 transcriber.on('error', (err) => audio.fail(err));
 
-ipcMain.handle('audio:start', () => audio.start());
+ipcMain.handle('audio:start', (_e, opts) => audio.start(opts));
+ipcMain.handle('audio:getSources', () => getSources());
+ipcMain.on('audio:pcm', (_e, source, pcm) => audio.feed(source, pcm));
+ipcMain.on('audio:capture-error', (_e, source, message) => audio.feedError(source, message));
 ipcMain.handle('audio:stop', () => audio.stop());
 ipcMain.handle('audio:status', () => audio.status());
 

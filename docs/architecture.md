@@ -31,7 +31,7 @@ Status: Phase 1 (shell only). Transcription, AI and storage are designed here bu
 
 - **Engine:** whisper.cpp, fully offline. `packages/transcriber/scripts/setup-whisper.ps1` builds (or downloads the prebuilt) `whisper-server` into `packages/transcriber/bin/Release/whisper-server.exe`; models in `packages/transcriber/models/`.
 - **Integration:** `@revelio/transcriber` spawns `bin/Release/whisper-server.exe` as a child process, restarts it with backoff if it exits, and POSTs 3-second WAV chunks over localhost.
-- **Capture (current):** `apps/desktop/audio.js` reads the mic and a loopback-style input ("Stereo Mix") via `naudiodon` (PortAudio), falling back to SoX; silent windows are skipped. IPC: `audio:start|stop|status` (invoke), `transcript:new` and `audio:status` (events).
+- **Capture (current):** `apps/desktop/audio.js`. Mic via `naudiodon`, else SoX, else renderer `getUserMedia`. Interviewer audio: the user picks a window/screen (`audio:getSources` → desktopCapturer); the preload captures it with `getUserMedia` + `chromeMediaSourceId` (on Windows this is the whole system mix) and streams 16 kHz PCM back over `audio:pcm`. Silent 3 s windows are skipped. IPC: `audio:start|stop|status|getSources` (invoke), `transcript:new` and `audio:status` (events).
 - **Acceleration:** CUDA build when `nvidia-smi` is present (Windows/Linux); Metal on Apple Silicon (default in whisper.cpp); CPU otherwise.
 - **Models:** `tiny` default; switcher for `base`, `small`, `medium`, `large`. Downloaded on demand from the whisper.cpp model repo.
 - **Speakers:** two independent streams — microphone = **You**, system audio = **Them**. Each stream is transcribed separately, so labels come from the source, not from diarization.
