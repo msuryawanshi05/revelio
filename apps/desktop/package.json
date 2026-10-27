@@ -11,7 +11,9 @@
     "electron": "^45.0.0"
   },
   "dependencies": {
-    "@revelio/transcriber": "*"
+    "@revelio/transcriber": "*",
+    "@revelio/storage": "*",
+    "@revelio/agent": "*"
   },
   "optionalDependencies": {
     "naudiodon": "^2.3.6"

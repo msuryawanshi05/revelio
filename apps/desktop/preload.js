@@ -5,6 +5,22 @@ contextBridge.exposeInMainWorld('revelio', {
   close: () => ipcRenderer.send('window:close'),
   setPinned: (pinned) => ipcRenderer.send('window:pin', pinned),
   getSources: () => ipcRenderer.invoke('audio:getSources'),
+  listKeys: () => ipcRenderer.invoke('keys:list'),
+  saveKey: (id, key) => ipcRenderer.invoke('keys:set', id, key),
+  detectQuestion: async (text) => (await ipcRenderer.invoke('agent:detect', { text })).isQuestion,
+  // Streams an answer; returns cancel(). Exactly one of onDone / onError fires unless cancelled.
+  streamAnswer: (provider, model, messages, onToken, onDone, onError) => {
+    const id = `${Date.now()}-${Math.random()}`;
+    const offs = [];
+    const finish = () => offs.forEach((off) => off());
+    offs.push(
+      on('agent:token', (d) => d.id === id && onToken(d.token)),
+      on('agent:done', (d) => { if (d.id === id) { finish(); onDone(); } }),
+      on('agent:error', (d) => { if (d.id === id) { finish(); onError(new Error(d.message)); } }),
+    );
+    ipcRenderer.invoke('agent:answer', { id, provider, model, messages }).catch((err) => { finish(); onError(err); });
+    return () => { finish(); ipcRenderer.invoke('agent:cancel'); };
+  },
   // sourceId: desktopCapturer id of the meeting window (optional); its audio is transcribed as 'interviewer'.
   startAudio: async (sourceId) => {
     const status = await ipcRenderer.invoke('audio:start', { sourceId });

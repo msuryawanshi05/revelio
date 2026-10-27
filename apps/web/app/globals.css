@@ -179,6 +179,14 @@ button, input, select { font: inherit; color: inherit; }
 .answer li { margin-bottom: 4px; }
 .answer-card { padding: 12px; margin-bottom: 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); }
 .question { padding: 8px 12px; margin-bottom: 12px; background: var(--accent); color: var(--accent-text); border-radius: 12px; font-weight: 600; }
+.answer-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.answer-text.error { color: var(--danger); }
+.typing { display: inline-flex; gap: 3px; margin-left: 4px; vertical-align: middle; }
+.typing span { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); animation: typing 1.2s infinite ease-in-out; }
+.typing span:nth-child(2) { animation-delay: 0.2s; }
+.typing span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typing { 0%, 80%, 100% { opacity: 0.25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
+@media (prefers-reduced-motion: reduce) { .typing span { animation: none; opacity: 0.6; } }
 .answer-foot { display: flex; align-items: center; gap: 2px; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); }
 .icon-btn[aria-pressed='true'] { background: var(--accent-soft); }
 .push { margin-left: auto; }
@@ -213,6 +221,12 @@ code { padding: 1px 4px; border-radius: 4px; background: var(--surface-2); }
 .field { display: flex; flex-direction: column; gap: 4px; font-weight: 600; font-size: 13px; }
 .field input { height: 36px; padding: 0 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); font-weight: 400; font-family: var(--mono); }
 .card .btn { align-self: flex-start; }
+.key-row { display: flex; gap: 8px; }
+.key-row input { flex: 1; min-width: 0; }
+.card .key-row .btn { align-self: auto; height: 36px; }
+.key-saved, .key-error { min-height: 1em; font-size: 12px; font-weight: 600; }
+.key-saved { color: var(--accent); }
+.key-error { margin: 0; color: var(--danger); }
 
 @media (max-width: 1000px) {
   .sidebar { width: 220px; }

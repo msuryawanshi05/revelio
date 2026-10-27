@@ -1,25 +1,53 @@
 'use client';
+import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
+import { PROVIDERS, buildMessages } from '@revelio/agent/src/context';
 
 const SPEAKER = { you: 'You', interviewer: 'Interviewer' };
 const clock = (iso) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
 const LANGUAGES = ['English', 'Spanish', 'French', 'German', 'Hindi', 'Japanese'];
 
-const MODELS = ['Claude Sonnet', 'Claude Haiku', 'Gemini Flash', 'Gemini Pro', 'GPT (default)', 'OpenRouter…', 'AgentRouter…'];
+const SESSION = 'Northwind · Senior Frontend Engineer';
 
 export default function LiveSession() {
   const [autoAnswer, setAutoAnswer] = useState(true);
-  const [model, setModel] = useState(MODELS[0]);
+  const [providers, setProviders] = useState([]); // PROVIDERS entries with a saved key
+  const [provider, setProvider] = useState(null);
+  const [answers, setAnswers] = useState([]); // newest first: { id, question, text, t, status: 'streaming'|'done'|'error', vote }
   const [audio, setAudio] = useState({ state: 'idle', message: '' });
   const [lines, setLines] = useState([]);
   const [lang, setLang] = useState(LANGUAGES[0]);
-  const [vote, setVote] = useState(null);
   const [sources, setSources] = useState(null); // meeting window picker list while open
   const [meeting, setMeeting] = useState(null); // { id, name } -> 'interviewer' audio
   const [desktop, setDesktop] = useState(null); // null until mounted; false in a plain browser (no Electron bridge)
   const transcriptRef = useRef(null);
+  const cancelRef = useRef(null);
+  const latest = useRef({}); // current values for the IPC callbacks registered once on mount
   const listening = audio.state === 'recording';
+  latest.current = { lines, provider, autoAnswer };
+
+  const patchAnswer = (id, patch) => setAnswers((all) => all.map((a) => (a.id === id ? { ...a, ...(typeof patch === 'function' ? patch(a) : patch) } : a)));
+
+  function answer(question) {
+    const api = window.revelio;
+    const p = PROVIDERS.find((x) => x.id === latest.current.provider);
+    if (!api?.streamAnswer || !p || !question) return;
+    cancelRef.current?.();
+    const id = Date.now();
+    setAnswers((all) => [{ id, question, text: '', t: clock(new Date().toISOString()), status: 'streaming' },
+      ...all.map((a) => (a.status === 'streaming' ? { ...a, status: 'done' } : a))]);
+    const messages = buildMessages({ entries: latest.current.lines, question, instructions: `${SESSION}, interview mode` });
+    cancelRef.current = api.streamAnswer(p.id, p.model, messages,
+      (token) => patchAnswer(id, (a) => ({ text: a.text + token })),
+      () => patchAnswer(id, { status: 'done' }),
+      (err) => patchAnswer(id, (a) => ({ status: 'error', text: a.text + (a.text ? '\n\n' : '') + err.message })));
+  }
+
+  const lastQuestion = () => {
+    const all = latest.current.lines;
+    return (all.findLast((l) => l.who === SPEAKER.interviewer) || all.at(-1))?.text;
+  };
 
   useEffect(() => {
     const api = window.revelio;
@@ -27,8 +55,20 @@ export default function LiveSession() {
     if (!api?.onTranscript) return;
     api.audioStatus().then(setAudio);
     const offStatus = api.onAudioStatus(setAudio);
-    const offTranscript = api.onTranscript((e) => setLines((prev) => [...prev, { who: SPEAKER[e.speaker], t: clock(e.timestamp), text: e.text }]));
-    return () => { offStatus(); offTranscript(); };
+    api.listKeys?.().then((saved) => {
+      const ready = PROVIDERS.filter((p) => saved[p.id]);
+      setProviders(ready);
+      setProvider((cur) => cur || ready[0]?.id || null);
+    }).catch(() => {});
+    const offTranscript = api.onTranscript((e) => {
+      const line = { who: SPEAKER[e.speaker], t: clock(e.timestamp), text: e.text };
+      setLines((prev) => [...prev, line]);
+      latest.current.lines = [...latest.current.lines, line]; // so an auto answer sees this line before React re-renders
+      if (e.speaker === 'interviewer' && latest.current.autoAnswer && latest.current.provider) {
+        api.detectQuestion(e.text).then((isQuestion) => isQuestion && answer(e.text));
+      }
+    });
+    return () => { offStatus(); offTranscript(); cancelRef.current?.(); };
   }, []);
 
   useEffect(() => {
@@ -40,13 +80,13 @@ export default function LiveSession() {
     <div className="live">
       <div className="live-header">
         <div>
-          <div className="live-title">Northwind · Senior Frontend Engineer</div>
+          <div className="live-title">{SESSION}</div>
           <div className="live-meta">Interview mode · {lang}</div>
         </div>
         <div className="live-header-right">
           <span className="timer" title="Session time remaining"><span className="dot live" /> 26:14</span>
-          <select className="select" value={model} onChange={(e) => setModel(e.target.value)} aria-label="AI model">
-            {MODELS.map((m) => <option key={m}>{m}</option>)}
+          <select className="select" value={provider || ''} onChange={(e) => setProvider(e.target.value)} aria-label="AI model" disabled={!providers.length}>
+            {providers.length ? providers.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.model}</option>) : <option value="">No API key</option>}
           </select>
           <label className="toggle">
             <input type="checkbox" checked={autoAnswer} onChange={(e) => setAutoAnswer(e.target.checked)} />
@@ -95,30 +135,24 @@ export default function LiveSession() {
         <section className="pane">
           <div className="pane-head">Answer</div>
           <div className="pane-body answer">
-            <article className="answer-card">
-              <div className="question">How would you debounce a search input so it only fires after the user stops typing?</div>
-              <p>Wrap the handler so each keystroke resets a timer, and only call the search once the timer completes:</p>
-              <pre>{`function debounce(fn, ms = 300) {
-  let t;
-  return (...args) => {
-    clearTimeout(t);
-    t = setTimeout(() => fn(...args), ms);
-  };
-}`}</pre>
-              <ul>
-                <li>~300 ms feels responsive without flooding the API.</li>
-                <li>Cancel in-flight requests (AbortController) so stale results never overwrite newer ones.</li>
-                <li>In React, keep the debounced function stable with <code>useMemo</code> and clear it on unmount.</li>
-              </ul>
-              <div className="answer-foot">
-                <button className="icon-btn" aria-label="Helpful" aria-pressed={vote === 'up'} onClick={() => setVote(vote === 'up' ? null : 'up')}>👍</button>
-                <button className="icon-btn" aria-label="Not helpful" aria-pressed={vote === 'down'} onClick={() => setVote(vote === 'down' ? null : 'down')}>👎</button>
-                <span className="push">03:58</span>
-              </div>
-            </article>
+            {!providers.length && <p className="muted" role="status">Add an API key in <Link href="/settings">Settings</Link> to enable answers</p>}
+            {answers.map((a) => (
+              <article key={a.id} className="answer-card" aria-busy={a.status === 'streaming'}>
+                <div className="question">{a.question}</div>
+                <div className={a.status === 'error' ? 'answer-text error' : 'answer-text'}>
+                  {a.text}
+                  {a.status === 'streaming' && <span className="typing" aria-label="Generating answer"><span /><span /><span /></span>}
+                </div>
+                <div className="answer-foot">
+                  <button className="icon-btn" aria-label="Helpful" aria-pressed={a.vote === 'up'} onClick={() => patchAnswer(a.id, { vote: a.vote === 'up' ? null : 'up' })}>👍</button>
+                  <button className="icon-btn" aria-label="Not helpful" aria-pressed={a.vote === 'down'} onClick={() => patchAnswer(a.id, { vote: a.vote === 'down' ? null : 'down' })}>👎</button>
+                  <span className="push">{a.t}</span>
+                </div>
+              </article>
+            ))}
           </div>
           <div className="pane-foot">
-            <button className="btn primary block">✦ Answer</button>
+            <button className="btn primary block" disabled={!desktop || !provider || !lines.length} onClick={() => answer(lastQuestion())}>✦ Answer</button>
           </div>
         </section>
       </div>
