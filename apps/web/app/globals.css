@@ -177,10 +177,28 @@ button, input, select { font: inherit; color: inherit; }
 .answer p { margin: 0 0 10px; }
 .answer ul { margin: 10px 0 0; padding-left: 18px; }
 .answer li { margin-bottom: 4px; }
-.question { padding: 8px 12px; margin-bottom: 12px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 0 8px 8px 0; font-weight: 600; }
+.answer-card { padding: 12px; margin-bottom: 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); }
+.question { padding: 8px 12px; margin-bottom: 12px; background: var(--accent); color: var(--accent-text); border-radius: 12px; font-weight: 600; }
+.answer-foot { display: flex; align-items: center; gap: 2px; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+.icon-btn[aria-pressed='true'] { background: var(--accent-soft); }
+.push { margin-left: auto; }
 pre, code { font-family: var(--mono); font-size: 12.5px; }
 pre { margin: 0; padding: 12px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border); overflow-x: auto; }
 code { padding: 1px 4px; border-radius: 4px; background: var(--surface-2); }
+
+.pane-foot { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--border); background: var(--surface); }
+.dot.rec { background: var(--danger); animation: pulse 1.6s ease-in-out infinite; }
+.mic { font-size: 16px; }
+
+/* Listening pulse: 3 rings, shown only while the pane is listening */
+.transcript { position: relative; }
+.pulse { display: none; position: absolute; top: 50%; left: 50%; width: 120px; height: 120px; margin: -60px 0 0 -60px; pointer-events: none; }
+.listening .pulse { display: block; }
+.pulse span { position: absolute; inset: 0; border: 2px solid var(--accent); border-radius: 50%; opacity: 0; animation: ring 2.4s ease-out infinite; }
+.pulse span:nth-child(2) { animation-delay: 0.8s; }
+.pulse span:nth-child(3) { animation-delay: 1.6s; }
+@keyframes ring { 0% { transform: scale(0.3); opacity: 0.6; } 100% { transform: scale(1); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .dot.rec, .pulse span { animation: none; opacity: 0.3; } .pulse span:nth-child(2) { transform: scale(0.65); } .pulse span:nth-child(3) { transform: scale(0.3); } }
 
 .controls { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--border); }
 .chat { flex: 1; min-width: 120px; height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); }
