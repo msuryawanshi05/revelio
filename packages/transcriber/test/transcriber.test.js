@@ -60,6 +60,9 @@ test('missing binary rejects with setup hint', async () => {
 });
 
 test('hallucination filter', () => {
-  for (const t of ['Thank you.', 'Thanks for watching!', '.', '...', '?', 'you', 'Bye.', 'Okay, so', ' ']) assert.ok(isHallucination(t), t);
-  for (const t of ['I used a debounce here.', 'Thank you for the question', 'React hooks', 'Sure, thank you']) assert.ok(!isHallucination(t), t);
+  for (const t of ['Thank you.', 'Thanks for watching!', '.', '...', '?', 'you', 'Bye.', 'Okay, so', ' ',
+    '>> Hello there', 'and then >> we left', 'George.', 'Thanks, George!', 'Hi George how are', 'the the the', 'Okay okay okay, sure.']) assert.ok(isHallucination(t), t);
+  for (const t of ['I used a debounce here.', 'Thank you for the question', 'React hooks', 'Sure, thank you',
+    'George Boole invented the algebra we use for boolean logic', 'We tried it, then we tried it again',
+    'I think the first approach, the second approach and the third approach all work fine here today']) assert.ok(!isHallucination(t), t);
 });

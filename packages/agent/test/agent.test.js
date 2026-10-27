@@ -54,6 +54,8 @@ test('streams tokens from every provider format and passes the system prompt', a
       assert.ifError(err);
       assert.deepStrictEqual(tokens, ['Hel', 'lo'], provider);
       assert.match(JSON.stringify(seen.at(-1).body), /SYS/, `${provider} system prompt`);
+      const { body } = seen.at(-1);
+      assert.strictEqual(body.max_tokens ?? body.generationConfig?.maxOutputTokens, 2000, `${provider} token cap`);
     }
   } finally { server.close(); }
 });

@@ -17,11 +17,17 @@ const HALLUCINATIONS = new Set(['thank you', 'thanks for watching', 'thank you f
   'thank you for listening', 'please subscribe', 'like and subscribe', 'subtitles by the amara org community', 'see you next time']);
 const FILLER = new Set(['you', 'thank', 'thanks', 'so', 'oh', 'uh', 'um', 'hmm', 'mm', 'bye', 'okay', 'ok', 'yeah', 'the', 'a', 'i', 'and']);
 
-// True for known silence hallucinations, punctuation-only text, and <3-word utterances made only of filler.
+// True for known silence hallucinations, punctuation-only text, <3-word utterances made only of filler,
+// '>>' speaker-change markers, a stray "George", and short text that repeats one word 3+ times.
 function isHallucination(text) {
+  if (text.includes('>>')) return true;
   const norm = text.toLowerCase().replace(/[^\p{L}\p{N}' ]+/gu, ' ').replace(/\s+/g, ' ').trim();
   const words = norm ? norm.split(' ') : [];
-  return !words.length || HALLUCINATIONS.has(norm) || (words.length < 3 && words.every((w) => FILLER.has(w)));
+  if (!words.length || HALLUCINATIONS.has(norm)) return true;
+  if (words.length < 3 && words.every((w) => FILLER.has(w))) return true;
+  if (words.length <= 4 && words.includes('george')) return true;
+  const counts = {};
+  return words.length <= 12 && words.some((w) => (counts[w] = (counts[w] || 0) + 1) >= 3);
 }
 
 const freePort = () => new Promise((resolve, reject) => {

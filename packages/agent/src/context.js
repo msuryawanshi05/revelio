@@ -3,7 +3,7 @@
 // id matches the key store / Settings ids; model is the default used for answers.
 const PROVIDERS = [
   { id: 'anthropic', name: 'Claude', model: 'claude-sonnet-4-5' },
-  { id: 'google', name: 'Gemini', model: 'gemini-2.0-flash' },
+  { id: 'google', name: 'Gemini', model: 'gemini-2.5-flash' },
   { id: 'openai', name: 'GPT', model: 'gpt-4o' },
   { id: 'openrouter', name: 'OpenRouter', model: 'anthropic/claude-sonnet-4.5' },
   { id: 'agentrouter', name: 'AgentRouter', model: 'claude-sonnet-4-5' },
