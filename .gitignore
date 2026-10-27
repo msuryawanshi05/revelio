@@ -6,3 +6,5 @@ vendor/
 models/
 *.log
 .env*
+packages/transcriber/whisper.cpp/
+packages/transcriber/bin/

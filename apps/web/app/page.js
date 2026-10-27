@@ -1,13 +1,8 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-const TRANSCRIPT = [
-  { who: 'Interviewer', t: '00:41', text: 'Thanks for joining. Could you start by walking me through a recent project you led?' },
-  { who: 'You', t: '01:05', text: 'Sure. Last quarter I led the migration of our dashboard from a legacy SPA to a server-rendered app.' },
-  { who: 'Interviewer', t: '02:18', text: 'Interesting. How did you handle state that previously lived entirely on the client?' },
-  { who: 'You', t: '02:40', text: 'We split it into server state, cached per request, and a small amount of UI state kept local.' },
-  { who: 'Interviewer', t: '03:52', text: 'How would you debounce a search input so it only fires after the user stops typing?' },
-];
+const SPEAKER = { you: 'You', interviewer: 'Interviewer' };
+const clock = (iso) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
 const LANGUAGES = ['English', 'Spanish', 'French', 'German', 'Hindi', 'Japanese'];
 
@@ -16,10 +11,26 @@ const MODELS = ['Claude Sonnet', 'Claude Haiku', 'Gemini Flash', 'Gemini Pro', '
 export default function LiveSession() {
   const [autoAnswer, setAutoAnswer] = useState(true);
   const [model, setModel] = useState(MODELS[0]);
-  const [listening, setListening] = useState(true);
-  const [lines, setLines] = useState(TRANSCRIPT);
+  const [audio, setAudio] = useState({ state: 'idle', message: '' });
+  const [lines, setLines] = useState([]);
   const [lang, setLang] = useState(LANGUAGES[0]);
   const [vote, setVote] = useState(null);
+  const transcriptRef = useRef(null);
+  const listening = audio.state === 'recording';
+
+  useEffect(() => {
+    const api = window.revelio;
+    if (!api?.onTranscript) return; // plain browser, no Electron
+    api.audioStatus().then(setAudio);
+    const offStatus = api.onAudioStatus(setAudio);
+    const offTranscript = api.onTranscript((e) => setLines((prev) => [...prev, { who: SPEAKER[e.speaker], t: clock(e.timestamp), text: e.text }]));
+    return () => { offStatus(); offTranscript(); };
+  }, []);
+
+  useEffect(() => {
+    const el = transcriptRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [lines]);
 
   return (
     <div className="live">
@@ -44,7 +55,7 @@ export default function LiveSession() {
       <div className="panes">
         <section className={listening ? 'pane listening' : 'pane'}>
           <div className="pane-head">Transcript</div>
-          <div className="pane-body transcript">
+          <div className="pane-body transcript" ref={transcriptRef}>
             <div className="pulse" aria-hidden="true"><span /><span /><span /></div>
             {lines.map((l, i) => (
               <div key={i} className={`line ${l.who === 'You' ? 'me' : ''}`}>
@@ -52,9 +63,10 @@ export default function LiveSession() {
                 <div>{l.text}</div>
               </div>
             ))}
+            {audio.message && <p className="muted" role="status">{audio.message}</p>}
           </div>
           <div className="pane-foot">
-            <button className="btn" onClick={() => setListening(!listening)}>{listening ? 'Stop' : 'Start'}</button>
+            <button className="btn" disabled={audio.state === 'starting'} onClick={() => (listening ? window.revelio?.stopAudio() : window.revelio?.startAudio())}>{listening ? 'Stop' : 'Start'}</button>
             <span className={listening ? 'dot rec' : 'dot'} title={listening ? 'Recording' : 'Not recording'} />
             <span className="mic" title="Microphone" aria-hidden="true">🎙</span>
             <button className="btn" onClick={() => setLines([])}>Clear</button>

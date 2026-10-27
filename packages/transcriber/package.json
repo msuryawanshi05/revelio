@@ -2,5 +2,9 @@
   "name": "@revelio/transcriber",
   "version": "0.1.0",
   "private": true,
-  "main": "src/index.js"
+  "main": "src/index.js",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "setup": "powershell -ExecutionPolicy Bypass -File scripts/setup-whisper.ps1"
+  }
 }

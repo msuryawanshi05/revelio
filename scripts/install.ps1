@@ -2,9 +2,6 @@
 # Run from the repo root:  powershell -ExecutionPolicy Bypass -File scripts\install.ps1
 $ErrorActionPreference = 'Stop'
 $Root    = Split-Path $PSScriptRoot -Parent
-$Vendor  = Join-Path $Root 'vendor'
-$Models  = Join-Path $Root 'models'
-$Whisper = Join-Path $Vendor 'whisper.cpp'
 
 function Step($msg) { Write-Host "`n==> $msg" -ForegroundColor Green }
 function Stub($msg) { Write-Host "    [stub] $msg" -ForegroundColor Yellow }
@@ -20,22 +17,17 @@ if ($major -lt 22) {
 }
 Write-Host "    node $(node -v), npm $(npm -v)"
 
-# 2. whisper.cpp source
-Step 'Fetching whisper.cpp'
-Stub "git clone --depth 1 https://github.com/ggerganov/whisper.cpp `"$Whisper`""
+# 2-4. whisper.cpp (source/prebuilt, CUDA if NVIDIA GPU) + ggml-tiny.bin
+& (Join-Path $Root 'packages\transcriber\scripts\setup-whisper.ps1')
 
-# 3. GPU detection + build
-Step 'Detecting GPU'
-$cuda = [bool](Get-Command nvidia-smi -ErrorAction SilentlyContinue)
-Write-Host ("    " + ($(if ($cuda) { 'NVIDIA GPU found -> CUDA build' } else { 'No NVIDIA GPU -> CPU build' })))
-Step 'Building whisper.cpp'
-$flags = if ($cuda) { '-DGGML_CUDA=1' } else { '' }
-Stub "cmake -S `"$Whisper`" -B `"$Whisper\build`" $flags   # needs CMake + MSVC Build Tools (or MinGW); CUDA Toolkit for GPU"
-Stub "cmake --build `"$Whisper\build`" --config Release -j"
-
-# 4. Model weights
-Step 'Downloading ggml-tiny.bin'
-Stub "Invoke-WebRequest https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin -OutFile `"$Models\ggml-tiny.bin`""
+# naudiodon (mic/system audio capture) is a native addon compiled by node-gyp during `npm install`. It needs:
+#   - Visual Studio Build Tools with the "Desktop development with C++" workload
+#       winget install Microsoft.VisualStudio.2022.BuildTools --override "--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+#   - Python 3 on PATH
+# It is an optional dependency: if the build fails, npm skips it and Revelio captures audio with SoX instead
+#   winget install ChrisBagwell.SoX   (then make sure sox.exe is on PATH)
+Step 'Checking native audio build prerequisites'
+if (-not (Get-Command python -ErrorAction SilentlyContinue)) { Write-Host '    Python not found - naudiodon will not build; SoX fallback will be used' -ForegroundColor Yellow }
 
 # 5. npm dependencies
 Step 'Installing npm dependencies'

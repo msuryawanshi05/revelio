@@ -29,8 +29,9 @@ Status: Phase 1 (shell only). Transcription, AI and storage are designed here bu
 
 ## Transcription
 
-- **Engine:** whisper.cpp, fully offline. Built by the install script into `vendor/whisper.cpp`; models in `models/`.
-- **Integration:** spawn `whisper-server` as a child process and POST VAD-segmented audio chunks over localhost (no native Node addon to rebuild per Electron version). Fallback: `whisper-cli` per chunk.
+- **Engine:** whisper.cpp, fully offline. `packages/transcriber/scripts/setup-whisper.ps1` builds (or downloads the prebuilt) `whisper-server` into `packages/transcriber/bin/whisper.exe`; models in `packages/transcriber/models/`.
+- **Integration:** `@revelio/transcriber` spawns `whisper.exe` (whisper-server) as a child process, restarts it with backoff if it exits, and POSTs 3-second WAV chunks over localhost.
+- **Capture (current):** `apps/desktop/audio.js` reads the mic and a loopback-style input ("Stereo Mix") via `naudiodon` (PortAudio), falling back to SoX; silent windows are skipped. IPC: `audio:start|stop|status` (invoke), `transcript:new` and `audio:status` (events).
 - **Acceleration:** CUDA build when `nvidia-smi` is present (Windows/Linux); Metal on Apple Silicon (default in whisper.cpp); CPU otherwise.
 - **Models:** `tiny` default; switcher for `base`, `small`, `medium`, `large`. Downloaded on demand from the whisper.cpp model repo.
 - **Speakers:** two independent streams — microphone = **You**, system audio = **Them**. Each stream is transcribed separately, so labels come from the source, not from diarization.

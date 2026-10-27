@@ -4,9 +4,16 @@
   "private": true,
   "main": "main.js",
   "scripts": {
-    "dev": "electron ."
+    "dev": "electron .",
+    "test": "node --test audio.test.js"
   },
   "devDependencies": {
     "electron": "^45.0.0"
+  },
+  "dependencies": {
+    "@revelio/transcriber": "*"
+  },
+  "optionalDependencies": {
+    "naudiodon": "^2.3.6"
   }
 }
